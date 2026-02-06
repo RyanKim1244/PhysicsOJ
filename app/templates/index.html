@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPC - Online Physics Competition Judge</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- MathJax for LaTeX rendering -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+    <header>
+        <h1>OPC <span>Online Physics Competition</span></h1>
+        <nav>
+            <a href="#problems">문제</a>
+            <a href="#competitions">대회</a>
+            <a href="#leaderboard">리더보드</a>
+            <a href="#history">이력</a>
+            <a href="#" onclick="promptUsername(); return false;" id="username-display">guest</a>
+        </nav>
+    </header>
+    <main id="app">
+        <div class="loading">로딩 중...</div>
+    </main>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
