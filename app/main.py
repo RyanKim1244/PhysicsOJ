@@ -1,4 +1,4 @@
-"""OPC - Online Physics Competition Judge - Application entry point."""
+"""PhysicsOJ - Physics Online Judge - Application entry point."""
 
 from contextlib import asynccontextmanager
 
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="OPC - Online Physics Competition Judge",
+    title="PhysicsOJ - Physics Online Judge",
     description="물리학 대회 기출문제 온라인 저지 시스템",
     version="1.0.0",
     lifespan=lifespan,

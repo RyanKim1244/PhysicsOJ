@@ -1,4 +1,4 @@
-/* OPC - Online Physics Competition Judge - Frontend */
+/* PhysicsOJ - Physics Online Judge - Frontend */
 
 const API = '';
 
@@ -20,11 +20,11 @@ async function postJSON(url, data) {
 }
 
 function getUsername() {
-    return localStorage.getItem('opc_username') || 'guest';
+    return localStorage.getItem('physicsoj_username') || 'guest';
 }
 
 function setUsername(name) {
-    localStorage.setItem('opc_username', name);
+    localStorage.setItem('physicsoj_username', name);
 }
 
 // ===== Router =====
