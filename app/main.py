@@ -5,9 +5,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.middleware.sessions import SessionMiddleware
 
+from app.config import SECRET_KEY
 from app.database import init_db, SessionLocal
-from app.routers import problems, submissions, competitions, stats
+from app.routers import problems, submissions, competitions, stats, auth
 from app.services.seed_data import seed_all
 
 
@@ -30,7 +32,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Session middleware (required for OAuth)
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+
 # Routers
+app.include_router(auth.router)
 app.include_router(problems.router)
 app.include_router(submissions.router)
 app.include_router(competitions.router)

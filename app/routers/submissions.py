@@ -1,8 +1,7 @@
 """Submissions API endpoints - 답안 제출 및 채점."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.database import get_db
 from app.models.models import Problem, User, Submission, SubmissionStatus
@@ -12,22 +11,32 @@ from app.services.judge import judge
 router = APIRouter(prefix="/api/submissions", tags=["submissions"])
 
 
+def _resolve_user(request: Request, username: str, db: Session) -> User:
+    """Resolve user: prefer session login, fallback to username field."""
+    user_id = request.session.get("user_id")
+    if user_id:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            return user
+
+    # Fallback: find or create by username (for non-logged-in users)
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        user = User(username=username, display_name=username)
+        db.add(user)
+        db.flush()
+    return user
+
+
 @router.post("", response_model=SubmissionResult)
-def submit_answer(submission: SubmissionCreate, db: Session = Depends(get_db)):
+def submit_answer(submission: SubmissionCreate, request: Request, db: Session = Depends(get_db)):
     """답안 제출 및 즉시 채점"""
-    # 문제 조회
     problem = db.query(Problem).filter(Problem.id == submission.problem_id).first()
     if not problem:
         raise HTTPException(status_code=404, detail="문제를 찾을 수 없습니다.")
 
-    # 사용자 조회 또는 생성
-    user = db.query(User).filter(User.username == submission.username).first()
-    if not user:
-        user = User(username=submission.username, display_name=submission.username)
-        db.add(user)
-        db.flush()
+    user = _resolve_user(request, submission.username, db)
 
-    # 채점
     result = judge(
         user_answer=submission.answer,
         answer_type=problem.answer_type.value,
@@ -36,7 +45,6 @@ def submit_answer(submission: SubmissionCreate, db: Session = Depends(get_db)):
         max_points=problem.points,
     )
 
-    # 상태 결정
     if result.is_correct:
         status = SubmissionStatus.CORRECT
     elif result.score > 0:
@@ -44,7 +52,6 @@ def submit_answer(submission: SubmissionCreate, db: Session = Depends(get_db)):
     else:
         status = SubmissionStatus.WRONG
 
-    # 제출 기록 저장
     db_submission = Submission(
         user_id=user.id,
         problem_id=problem.id,

@@ -78,6 +78,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
     display_name = Column(String(100), default="")
+    email = Column(String(200), unique=True, nullable=True, index=True)
+    picture = Column(String(500), default="")
+    google_id = Column(String(100), unique=True, nullable=True, index=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     submissions = relationship("Submission", back_populates="user")
