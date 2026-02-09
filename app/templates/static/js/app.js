@@ -29,12 +29,8 @@ function setUsername(name) {
 
 // ===== Router =====
 
-function navigate(hash) {
-    window.location.hash = hash;
-}
-
 function getRoute() {
-    const hash = window.location.hash.slice(1) || 'problems';
+    const hash = window.location.hash.slice(1) || 'home';
     const parts = hash.split('/');
     return { page: parts[0], params: parts.slice(1) };
 }
@@ -51,11 +47,88 @@ function statusBadge(s) {
     return `<span class="badge badge-${s}">${labels[s] || s}</span>`;
 }
 
-// ===== Pages =====
+function loading() {
+    return '<div class="loading-spinner"><div class="spinner"></div></div>';
+}
+
+// ===== HOME PAGE =====
+
+async function renderHome() {
+    const main = document.getElementById('app');
+    main.innerHTML = loading();
+
+    const [problems, competitions] = await Promise.all([
+        fetchJSON('/api/problems'),
+        fetchJSON('/api/competitions'),
+    ]);
+
+    const totalProblems = problems.length;
+    const totalComps = competitions.length;
+    const topics = [...new Set(problems.map(p => p.topic))].length;
+
+    main.innerHTML = `
+        <div class="hero">
+            <span class="hero-badge">Physics Online Judge</span>
+            <h1>물리학 문제를<br>풀고 실력을 키우세요</h1>
+            <p>IPhO, KPhO, APhO 등 세계 물리 대회 기출문제를 풀고<br>즉시 채점 받을 수 있습니다</p>
+            <div class="hero-actions">
+                <a href="#problems" class="btn btn-primary btn-lg">문제 풀기</a>
+                <a href="#competitions" class="btn btn-outline btn-lg">대회 둘러보기</a>
+            </div>
+            <div class="quick-stats">
+                <div class="quick-stat">
+                    <div class="qs-value">${totalProblems}</div>
+                    <div class="qs-label">문제</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="qs-value">${totalComps}</div>
+                    <div class="qs-label">대회</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="qs-value">${topics}</div>
+                    <div class="qs-label">주제 분야</div>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="home-section-title">대회별 문제</h3>
+        <div class="feature-grid">
+            ${competitions.map(c => `
+                <a href="#problems" class="feature-card" onclick="setTimeout(()=>{const el=document.getElementById('filter-comp');if(el){el.value='${c.abbreviation}';el.dispatchEvent(new Event('change'));}},150)">
+                    <div class="fc-icon fc-icon-blue">${c.abbreviation.charAt(0)}</div>
+                    <h3>${c.name}</h3>
+                    <p>${c.description}</p>
+                    <span class="fc-meta">${c.problem_count}개 문제 &rarr;</span>
+                </a>
+            `).join('')}
+        </div>
+
+        <h3 class="home-section-title">최근 추가된 문제</h3>
+        <div class="problem-list">
+            ${problems.slice(0, 5).map(p => `
+                <a class="problem-item" href="#problem/${p.id}">
+                    <span class="problem-id">${p.competition_abbr} ${p.year}-${p.problem_number}</span>
+                    <div class="problem-title-block">
+                        <h3>${p.title}</h3>
+                        <div class="meta">${p.topic}</div>
+                    </div>
+                    ${difficultyBadge(p.difficulty)}
+                    <span class="problem-points">${p.points}점</span>
+                    <span class="problem-solved">${p.solved_count}명 풀이</span>
+                </a>
+            `).join('')}
+        </div>
+        <div style="text-align:center;margin-top:1.25rem;">
+            <a href="#problems" class="btn btn-outline">모든 문제 보기 &rarr;</a>
+        </div>
+    `;
+}
+
+// ===== PROBLEMS PAGE =====
 
 async function renderProblems() {
     const main = document.getElementById('app');
-    main.innerHTML = '<div class="loading">로딩 중...</div>';
+    main.innerHTML = loading();
 
     const [problems, topics, competitions] = await Promise.all([
         fetchJSON('/api/problems'),
@@ -64,11 +137,14 @@ async function renderProblems() {
     ]);
 
     let html = `
-        <h2 style="margin-bottom:1rem;">문제 목록</h2>
+        <div class="page-header">
+            <h2>Problems</h2>
+            <p>${problems.length}개의 물리학 문제</p>
+        </div>
         <div class="filters">
             <select id="filter-comp">
                 <option value="">모든 대회</option>
-                ${competitions.map(c => `<option value="${c.abbreviation}">${c.abbreviation} - ${c.name}</option>`).join('')}
+                ${competitions.map(c => `<option value="${c.abbreviation}">${c.abbreviation}</option>`).join('')}
             </select>
             <select id="filter-topic">
                 <option value="">모든 주제</option>
@@ -103,7 +179,6 @@ async function renderProblems() {
     html += '</div>';
     main.innerHTML = html;
 
-    // Filters
     const filterComp = document.getElementById('filter-comp');
     const filterTopic = document.getElementById('filter-topic');
     const filterDiff = document.getElementById('filter-diff');
@@ -126,9 +201,11 @@ async function renderProblems() {
     filterDiff.addEventListener('change', applyFilters);
 }
 
+// ===== PROBLEM DETAIL =====
+
 async function renderProblem(id) {
     const main = document.getElementById('app');
-    main.innerHTML = '<div class="loading">로딩 중...</div>';
+    main.innerHTML = loading();
 
     const problem = await fetchJSON(`/api/problems/${id}`);
 
@@ -142,7 +219,7 @@ async function renderProblem(id) {
     if (problem.hints && problem.hints.length > 0) {
         hintsHtml = `
             <div class="hints-section">
-                <span class="solution-toggle" onclick="showHints()">힌트 보기</span>
+                <span class="solution-toggle" onclick="showHints()">&#128161; 힌트 보기</span>
                 <div id="hints-container">
                     ${problem.hints.map((h, i) => `<div class="hint-item" id="hint-${i}">${i + 1}. ${h}</div>`).join('')}
                 </div>
@@ -150,13 +227,20 @@ async function renderProblem(id) {
         `;
     }
 
+    const typeLabels = {
+        numeric: '숫자를 입력하세요 (예: 3.14, 2.5e3)',
+        expression: '수식을 입력하세요 (예: 2*pi*sqrt(L/g))',
+        multiple_choice: '보기를 입력하세요 (A, B, C, D)',
+        multi_part: 'JSON 형식으로 입력하세요',
+    };
+
     main.innerHTML = `
         <div class="problem-detail">
-            <a href="#problems" class="btn btn-secondary" style="margin-bottom:1rem;">&larr; 목록으로</a>
+            <a href="#problems" class="btn btn-ghost btn-sm" style="margin-bottom:1rem;">&larr; 목록으로</a>
             <div class="card">
-                <h2>${problem.title}</h2>
+                <h2 style="font-size:1.3rem;font-weight:800;letter-spacing:-0.02em;">${problem.title}</h2>
                 <div class="problem-meta">
-                    <span>${problem.competition_abbr} ${problem.year} #${problem.problem_number}</span>
+                    <span style="font-weight:600;color:var(--primary);">${problem.competition_abbr} ${problem.year} #${problem.problem_number}</span>
                     ${difficultyBadge(problem.difficulty)}
                     <span>${problem.topic}</span>
                     <span>${problem.points}점</span>
@@ -174,12 +258,7 @@ async function renderProblem(id) {
                         ${answerInput}
                         <button class="btn btn-primary" onclick="submitAnswer(${problem.id})">제출</button>
                     </div>
-                    <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-muted);">
-                        답안 유형: ${problem.answer_type}
-                        ${problem.answer_type === 'numeric' ? '| 숫자를 입력하세요 (예: 3.14, 2.5e3)' : ''}
-                        ${problem.answer_type === 'expression' ? '| 수식을 입력하세요 (예: 2*pi*sqrt(L/g))' : ''}
-                        ${problem.answer_type === 'multi_part' ? '| JSON 형식으로 입력하세요' : ''}
-                    </div>
+                    <div class="input-hint">${typeLabels[problem.answer_type] || ''}</div>
                 </div>
 
                 <div class="result-box" id="result-box">
@@ -189,34 +268,44 @@ async function renderProblem(id) {
                 </div>
 
                 <div class="solution-section">
-                    <span class="solution-toggle" onclick="toggleSolution(${problem.id})">풀이 보기</span>
+                    <span class="solution-toggle" onclick="toggleSolution(${problem.id})">&#128214; 풀이 보기</span>
                     <div class="solution-content" id="solution-content"></div>
                 </div>
             </div>
         </div>
     `;
 
-    // Render LaTeX if MathJax loaded
     if (window.MathJax) {
         MathJax.typesetPromise([document.getElementById('problem-body')]);
     }
 }
 
+// ===== COMPETITIONS PAGE =====
+
 async function renderCompetitions() {
     const main = document.getElementById('app');
-    main.innerHTML = '<div class="loading">로딩 중...</div>';
+    main.innerHTML = loading();
 
     const competitions = await fetchJSON('/api/competitions');
 
-    let html = '<h2 style="margin-bottom:1rem;">대회 목록</h2><div class="competition-grid">';
+    const icons = { IPhO: '🌍', APhO: '🌏', KPhO: '🇰🇷', 'F=ma': '🇺🇸', BPhO: '🇬🇧' };
+
+    let html = `
+        <div class="page-header">
+            <h2>Competitions</h2>
+            <p>등록된 물리학 대회</p>
+        </div>
+        <div class="competition-grid">
+    `;
+
     for (const c of competitions) {
         html += `
             <div class="comp-card">
-                <span class="abbr">${c.abbreviation}</span>
+                <span class="abbr">${icons[c.abbreviation] || ''} ${c.abbreviation}</span>
                 <h3>${c.name}</h3>
                 <div class="desc">${c.description}</div>
                 <div class="count">${c.problem_count}개 문제</div>
-                <a href="#problems" onclick="setTimeout(()=>{document.getElementById('filter-comp').value='${c.abbreviation}';document.getElementById('filter-comp').dispatchEvent(new Event('change'));},100)" class="btn btn-secondary" style="margin-top:0.75rem;">문제 보기</a>
+                <a href="#problems" onclick="setTimeout(()=>{const el=document.getElementById('filter-comp');if(el){el.value='${c.abbreviation}';el.dispatchEvent(new Event('change'));}},150)" class="btn btn-outline btn-sm" style="margin-top:0.75rem;">문제 보기 &rarr;</a>
             </div>
         `;
     }
@@ -224,20 +313,21 @@ async function renderCompetitions() {
     main.innerHTML = html;
 }
 
+// ===== LEADERBOARD PAGE =====
+
 async function renderLeaderboard() {
     const main = document.getElementById('app');
-    main.innerHTML = '<div class="loading">로딩 중...</div>';
+    main.innerHTML = loading();
 
     const [leaderboard, userStats] = await Promise.all([
         fetchJSON('/api/stats/leaderboard'),
         fetchJSON(`/api/stats/user/${getUsername()}`).catch(() => null),
     ]);
 
-    let html = '';
+    let html = `<div class="page-header"><h2>Leaderboard</h2><p>사용자 순위</p></div>`;
 
     if (userStats) {
         html += `
-            <h2 style="margin-bottom:1rem;">내 통계</h2>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value">${userStats.problems_solved}</div>
@@ -259,11 +349,10 @@ async function renderLeaderboard() {
         `;
     }
 
-    html += `<h2 style="margin-bottom:1rem;">리더보드</h2>`;
-
     if (leaderboard.length === 0) {
-        html += '<div class="card"><p>아직 제출된 답안이 없습니다.</p></div>';
+        html += '<div class="card"><p style="color:var(--text-muted);">아직 제출된 답안이 없습니다.</p></div>';
     } else {
+        const rankIcons = { 1: '🥇', 2: '🥈', 3: '🥉' };
         html += `
             <div class="card" style="padding:0;overflow:hidden;">
                 <table class="leaderboard-table">
@@ -273,8 +362,8 @@ async function renderLeaderboard() {
                     <tbody>
                         ${leaderboard.map(e => `
                             <tr>
-                                <td class="${e.rank <= 3 ? 'rank-' + e.rank : ''}">#${e.rank}</td>
-                                <td>${e.display_name}</td>
+                                <td class="${e.rank <= 3 ? 'rank-' + e.rank : ''}">${rankIcons[e.rank] || ''} #${e.rank}</td>
+                                <td style="font-weight:600;">${e.display_name}</td>
                                 <td>${e.total_score.toFixed(1)}</td>
                                 <td>${e.problems_solved}</td>
                             </tr>
@@ -288,17 +377,29 @@ async function renderLeaderboard() {
     main.innerHTML = html;
 }
 
+// ===== HISTORY PAGE =====
+
 async function renderHistory() {
     const main = document.getElementById('app');
-    main.innerHTML = '<div class="loading">로딩 중...</div>';
+    main.innerHTML = loading();
 
     try {
         const history = await fetchJSON(`/api/submissions/history/${getUsername()}`);
 
-        let html = `<h2 style="margin-bottom:1rem;">제출 이력 (${getUsername()})</h2>`;
+        let html = `
+            <div class="page-header">
+                <h2>History</h2>
+                <p>${getUsername()}님의 제출 이력</p>
+            </div>
+        `;
 
         if (history.length === 0) {
-            html += '<div class="card"><p>아직 제출한 답안이 없습니다.</p></div>';
+            html += `
+                <div class="card" style="text-align:center;padding:3rem;">
+                    <p style="color:var(--text-muted);margin-bottom:1rem;">아직 제출한 답안이 없습니다</p>
+                    <a href="#problems" class="btn btn-primary">문제 풀러 가기</a>
+                </div>
+            `;
         } else {
             html += '<div class="problem-list">';
             for (const s of history) {
@@ -311,6 +412,7 @@ async function renderHistory() {
                         </div>
                         ${statusBadge(s.status)}
                         <span class="problem-points">${s.score}점</span>
+                        <span></span>
                     </a>
                 `;
             }
@@ -319,7 +421,12 @@ async function renderHistory() {
 
         main.innerHTML = html;
     } catch {
-        main.innerHTML = '<div class="card"><p>사용자를 찾을 수 없습니다.</p></div>';
+        main.innerHTML = `
+            <div class="card" style="text-align:center;padding:3rem;">
+                <p style="color:var(--text-muted);margin-bottom:1rem;">제출 이력이 없습니다</p>
+                <a href="#problems" class="btn btn-primary">문제 풀러 가기</a>
+            </div>
+        `;
     }
 }
 
@@ -328,10 +435,7 @@ async function renderHistory() {
 async function submitAnswer(problemId) {
     const input = document.getElementById('answer-input');
     const answer = input.value.trim();
-    if (!answer) {
-        alert('답안을 입력해주세요.');
-        return;
-    }
+    if (!answer) { alert('답안을 입력해주세요.'); return; }
 
     const resultBox = document.getElementById('result-box');
     resultBox.style.display = 'none';
@@ -353,38 +457,25 @@ async function submitAnswer(problemId) {
 
 async function toggleSolution(problemId) {
     const content = document.getElementById('solution-content');
-    if (content.style.display === 'block') {
-        content.style.display = 'none';
-        return;
-    }
+    if (content.style.display === 'block') { content.style.display = 'none'; return; }
 
     const data = await fetchJSON(`/api/problems/${problemId}/solution`);
     content.innerHTML = data.solution || '풀이가 아직 등록되지 않았습니다.';
     content.style.display = 'block';
 
-    if (window.MathJax) {
-        MathJax.typesetPromise([content]);
-    }
+    if (window.MathJax) { MathJax.typesetPromise([content]); }
 }
 
 let hintsRevealed = 0;
 function showHints() {
     const hint = document.getElementById(`hint-${hintsRevealed}`);
-    if (hint) {
-        hint.style.display = 'block';
-        hintsRevealed++;
-    }
+    if (hint) { hint.style.display = 'block'; hintsRevealed++; }
 }
-
-// ===== Username prompt =====
 
 function promptUsername() {
     const current = getUsername();
     const name = prompt('사용자명을 입력하세요:', current);
-    if (name && name.trim()) {
-        setUsername(name.trim());
-        route();
-    }
+    if (name && name.trim()) { setUsername(name.trim()); route(); }
 }
 
 // ===== Router =====
@@ -393,38 +484,32 @@ async function route() {
     const { page, params } = getRoute();
 
     // Update nav
-    document.querySelectorAll('nav a').forEach(a => {
-        a.classList.toggle('active', a.getAttribute('href') === '#' + page);
+    document.querySelectorAll('#main-nav a').forEach(a => {
+        a.classList.toggle('active', a.dataset.page === page);
     });
 
     document.getElementById('username-display').textContent = getUsername();
 
+    // Reset hints counter
+    hintsRevealed = 0;
+
     try {
         switch (page) {
-            case 'problems':
-                await renderProblems();
-                break;
-            case 'problem':
-                await renderProblem(params[0]);
-                break;
-            case 'competitions':
-                await renderCompetitions();
-                break;
-            case 'leaderboard':
-                await renderLeaderboard();
-                break;
-            case 'history':
-                await renderHistory();
-                break;
-            default:
-                await renderProblems();
+            case 'home': await renderHome(); break;
+            case 'problems': await renderProblems(); break;
+            case 'problem': await renderProblem(params[0]); break;
+            case 'competitions': await renderCompetitions(); break;
+            case 'leaderboard': await renderLeaderboard(); break;
+            case 'history': await renderHistory(); break;
+            default: await renderHome();
         }
     } catch (err) {
         document.getElementById('app').innerHTML =
-            `<div class="card"><p>오류가 발생했습니다: ${err.message}</p></div>`;
+            `<div class="card" style="text-align:center;padding:2rem;">
+                <p style="color:var(--danger);">오류가 발생했습니다: ${err.message}</p>
+            </div>`;
     }
 }
 
-// Init
 window.addEventListener('hashchange', route);
 window.addEventListener('load', route);

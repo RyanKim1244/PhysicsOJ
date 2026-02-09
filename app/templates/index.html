@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PhysicsOJ - Physics Online Judge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
-    <!-- MathJax for LaTeX rendering -->
     <script>
         window.MathJax = {
             tex: {
@@ -20,19 +21,36 @@
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
 <body>
-    <header>
-        <h1>PhysicsOJ <span>Physics Online Judge</span></h1>
-        <nav>
-            <a href="#problems">문제</a>
-            <a href="#competitions">대회</a>
-            <a href="#leaderboard">리더보드</a>
-            <a href="#history">이력</a>
-            <a href="#" onclick="promptUsername(); return false;" id="username-display">guest</a>
-        </nav>
+    <header id="site-header">
+        <div class="header-inner">
+            <a href="#home" class="logo">
+                <span class="logo-icon">&#9883;</span>
+                <span class="logo-text">PhysicsOJ</span>
+            </a>
+            <nav id="main-nav">
+                <a href="#home" data-page="home">Home</a>
+                <a href="#problems" data-page="problems">Problems</a>
+                <a href="#competitions" data-page="competitions">Competitions</a>
+                <a href="#leaderboard" data-page="leaderboard">Leaderboard</a>
+                <a href="#history" data-page="history">History</a>
+            </nav>
+            <div class="header-user" onclick="promptUsername()">
+                <span class="user-icon">&#9679;</span>
+                <span id="username-display">guest</span>
+            </div>
+        </div>
     </header>
+
     <main id="app">
-        <div class="loading">로딩 중...</div>
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
     </main>
+
+    <footer>
+        <p>PhysicsOJ &mdash; Physics Online Judge System</p>
+    </footer>
+
     <script src="/static/js/app.js"></script>
 </body>
 </html>
